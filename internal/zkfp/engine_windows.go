@@ -204,40 +204,49 @@ func variantToInt32(v *ole.VARIANT) int32 {
 	}
 }
 
-// CaptureTemplate blocks until a template is available or timeout.
-func (e *Engine) CaptureTemplate(timeout time.Duration) (template9, template10 string, err error) {
+func (e *Engine) CaptureTemplate(timeout time.Duration) (FPStringV9, FPStringV10 string, err error) {
+	oldStringTemplate, _ := e.GetTemplateAsStringEx("9")
+
 	if err := e.BeginCapture(); err != nil {
 		return "", "", err
 	}
-	defer e.CancelCapture()
+	
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		runMessageLoop()
-		t9, _ := e.GetTemplateAsStringEx("9")
-		t10, _ := e.GetTemplateAsStringEx("10")
-		if t9 != "" {
-			return t9, t10, nil
+		FPStringV9, _ := e.GetTemplateAsStringEx("9")
+		
+		if FPStringV9 != "" && FPStringV9 != oldStringTemplate {
+			FPStringV10, _ := e.GetTemplateAsStringEx("10")
+			return FPStringV9, FPStringV10, nil
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
+
+	_ = e.CancelCapture()
 	return "", "", fmt.Errorf("capture timeout after %v", timeout)
 }
 
-// EnrollTemplate runs enrollment and returns template string.
-func (e *Engine) EnrollTemplate(enrollCount int, timeout time.Duration) (template9, template10 string, err error) {
+func (e *Engine) EnrollTemplate(enrollCount int, timeout time.Duration) (FPStringV9, FPStringV10 string, err error) {
+	oldStringTemplate, _ := e.GetTemplateAsStringEx("9")
+
 	e.SetEnrollCount(int32(enrollCount))
 	if err := e.BeginEnroll(); err != nil {
 		return "", "", err
 	}
+	
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		runMessageLoop()
-		t9, _ := e.GetTemplateAsStringEx("9")
-		t10, _ := e.GetTemplateAsStringEx("10")
-		if t9 != "" {
-			return t9, t10, nil
+		FPStringV9, _ := e.GetTemplateAsStringEx("9")
+		
+		if FPStringV9 != "" && FPStringV9 != oldStringTemplate {
+			FPStringV10, _ := e.GetTemplateAsStringEx("10")
+			return FPStringV9, FPStringV10, nil
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
+
+	_ = e.CancelEnroll()
 	return "", "", fmt.Errorf("enroll timeout after %v", timeout)
 }

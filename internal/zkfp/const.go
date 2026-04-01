@@ -23,4 +23,4 @@ const (
 
 // ZKFPEngX CLSID: CA69969C-2F27-41D3-954D-A48B941C3BA7
 // ProgID is typically registered by ZKFinger SDK setup (e.g. from Biokey.ocx)
-const defaultProgID = "ZKFPEngX.ZKFPEngX"
+const defaultProgID = "ZKFPEngXControl.ZKFPEngX"

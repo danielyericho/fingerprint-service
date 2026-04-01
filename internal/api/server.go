@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"fmt"
 
 	"fingerprint-service/internal/zkfp"
 	"fingerprint-service/pkg/fingerprint"
@@ -50,7 +51,22 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/verify", s.handleVerify)
 	mux.HandleFunc("/identify", s.handleIdentify)
 	mux.HandleFunc("/health", s.handleHealth)
-	return mux
+	return corsMiddleware(mux)
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -88,7 +104,7 @@ func (s *Server) handleEnroll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	presses := 3
-	timeout := 60 * time.Second
+	timeout := 30 * time.Second
 	if p := r.URL.Query().Get("presses"); p != "" {
 		if n, err := strconv.Atoi(p); err == nil && n >= 1 && n <= 5 {
 			presses = n
@@ -118,6 +134,7 @@ func (s *Server) handleVerify(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 		return
 	}
+	fmt.Printf("DEBUG HASIL DECODE VERIFY: %+v\n", req)
 	if req.RegisteredTemplate == "" || req.VerificationTemplate == "" {
 		writeJSONError(w, http.StatusBadRequest, "registered_template and verification_template required")
 		return

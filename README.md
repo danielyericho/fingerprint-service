@@ -18,22 +18,125 @@ Service berbasis Go untuk Windows yang mengintegrasikan **ZKFinger SDK** (ZKTeco
 
 ## Build
 
-Pastikan **GOROOT** mengarah ke instalasi Go yang benar (path std lib harus valid, mis. `GOROOT\src\encoding\json`, bukan `GOROOT\src\src\...`). Jika build gagal dengan "package X is not in std", perbaiki instalasi Go atau set `GOROOT` ke folder Go yang benar. Kemudian:
+Pastikan **GOROOT** mengarah ke instalasi Go yang benar (path std lib harus valid, mis. `GOROOT\src\encoding\json`, bukan `GOROOT\src\src\...`). Jika build gagal dengan "package X is not in std", perbaiki instalasi Go atau set `GOROOT` ke folder Go yang benar.
+
+### Build dengan script (disarankan)
+
+Script `build.sh` mem-build `fingerprint-service.exe` dan `cli.exe`, menyematkan build version ke binary, lalu menyimpan version ke `bin/version.txt`.
+
+Script akan mem-build binary, menyimpan version ke `bin/version.txt`, lalu membuat ZIP installer di `dist/installer-fingerprint-qubu-service-<version>.zip`.
+
+```bash
+cd D:\Education\programming\golang\fingerprint-service
+chmod +x build.sh   # sekali saja di Git Bash / WSL
+./build.sh
+```
+
+Opsi version tanpa prompt interaktif:
+
+```bash
+./build.sh v1.0
+# atau
+VERSION=v1.0 ./build.sh
+```
+
+Ubah lokasi output ZIP (default: `dist/` di root proyek):
+
+```bash
+OUTPUT_DIR=/c/Users/Dream/Downloads ./build.sh v1.0
+```
+
+Cek version setelah build:
+
+```bash
+bin\fingerprint-service.exe -version
+bin\cli.exe -version
+```
+
+### Build manual
 
 ```bash
 cd D:\Education\programming\golang\fingerprint-service
 go mod tidy
-go build -o bin/server.exe ./cmd/server
-go build -o bin/cli.exe ./cmd/cli
+go build -ldflags "-X main.version=v1.0" -o bin\fingerprint-service.exe ./cmd/server
+go build -ldflags "-X main.version=v1.0" -o bin\cli.exe ./cmd/cli
 ```
 
 Build hanya bermakna di Windows (package `internal/zkfp` memakai go-ole dan API Windows).
 
-## Menjalankan server
+## Menjalankan server (console)
 
 ```bash
-bin\server.exe -addr :8080
+bin\fingerprint-service.exe -addr :8080
 ```
+
+## Menjalankan sebagai Windows Service
+
+Service name (internal): **FingerprintQubuService**  
+Display name: **Fingerprint Qubu Service**
+
+Aplikasi mendukung dua mode:
+
+1. **Native Windows SCM** — jika dijalankan langsung oleh Service Control Manager, proses mendeteksi konteks service dan memakai `golang.org/x/sys/windows/svc`.
+2. **NSSM wrapper** — disarankan untuk instalasi production (mirip `orbita-lock-door`), dengan script di folder `bin\`.
+
+### Instalasi via NSSM (disarankan)
+
+Sebelum menjalankan `install.bat`, pastikan folder `bin\` berisi:
+
+- `fingerprint-service.exe` — binary hasil build
+- `nssm.exe` — service wrapper
+
+Jika `nssm.exe` belum ada, jalankan dulu:
+
+```bash
+cd bin
+download-nssm.bat
+```
+
+Script itu akan mencoba unduh otomatis (URL CI NSSM atau `winget install NSSM.NSSM`). Alternatif manual:
+
+```powershell
+winget install NSSM.NSSM
+copy "$env:LOCALAPPDATA\Microsoft\WinGet\Links\nssm.exe" bin\nssm.exe
+```
+
+Jalankan sebagai **Administrator**:
+
+```bash
+cd bin
+install.bat
+```
+
+Script lain:
+
+| Script | Fungsi |
+|--------|--------|
+| `install.bat` | Install service via NSSM, konfigurasi log rotasi, lalu start |
+| `start.bat` | Start service yang sudah terinstall |
+| `stop.bat` | Stop service (graceful Ctrl+C dulu) |
+| `uninstall.bat` | Stop dan hapus service |
+
+### Log service
+
+NSSM menangkap stdout/stderr ke:
+
+| File | Isi |
+|------|-----|
+| `bin\logs\fingerprint.err.log` | Log utama (startup, shutdown, error) |
+| `bin\logs\fingerprint.out.log` | Output stdout (jarang dipakai) |
+
+Live-tail di PowerShell:
+
+```powershell
+Get-Content -Path .\bin\logs\fingerprint.err.log -Wait -Tail 50
+```
+
+### Catatan service
+
+- Jalankan script install/start/stop/uninstall sebagai **Administrator**.
+- Akses sensor fingerprint/COM sering membutuhkan hak admin atau service account yang sesuai.
+- Saat dijalankan sebagai service, working directory otomatis dipindah ke folder executable agar path relatif konsisten.
 
 Endpoint:
 
@@ -79,7 +182,8 @@ Tidak ada database di dalam service ini.
 
 ## Struktur repo
 
-- `cmd/server` — HTTP API server
+- `cmd/server` — HTTP API server (termasuk dukungan Windows Service)
+- `bin/` — Script install/start/stop/uninstall service (NSSM) dan output binary
 - `cmd/cli` — CLI untuk capture, enroll, verify, identify
 - `internal/zkfp` — Wrapper COM (go-ole) untuk ZKFPEngX; build tag `windows`
 - `internal/api` — HTTP handler dan implementasi service

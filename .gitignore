@@ -3,7 +3,11 @@
 *.dll
 *.so
 *.dylib
-/bin/
+/bin/*.exe
+/bin/*.dll
+/bin/logs/
+/bin/nssm.exe
+/dist/
 
 # Go
 go.sum

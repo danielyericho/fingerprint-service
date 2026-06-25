@@ -19,7 +19,13 @@ func main() {
 	regTpl := flag.String("reg", "", "registered template (for verify)")
 	verTpl := flag.String("ver", "", "verification template (for verify/identify)")
 	templatesFile := flag.String("templates", "", "JSON file with templates array for identify (each: id, template9, template10)")
+	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("fingerprint-cli %s\n", version)
+		return
+	}
 
 	if *cmd == "" {
 		fmt.Fprintf(os.Stderr, "usage: cli -cmd capture|enroll|verify|identify [options]\n")

@@ -70,7 +70,7 @@ func runHTTPServer(ctx context.Context, addr string) (err error) {
 }
 
 func main() {
-	addr := flag.String("addr", ":8080", "HTTP listen address")
+	addr := flag.String("addr", ":8083", "HTTP listen address")
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
 

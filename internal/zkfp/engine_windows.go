@@ -4,7 +4,6 @@ package zkfp
 
 import (
 	"fmt"
-	"os"
 	"runtime"
 	"strings"
 	"sync"
@@ -39,7 +38,6 @@ func candidateProgIDs(progID string) []string {
 
 	add(progID)
 	if progID == "" {
-		add(os.Getenv(envProgID))
 		add(defaultProgID)
 		add("ZKFPEngX.ZKFPEngX")
 	}

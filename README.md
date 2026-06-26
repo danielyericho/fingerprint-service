@@ -67,7 +67,7 @@ Build hanya bermakna di Windows (package `internal/zkfp` memakai go-ole dan API 
 ## Menjalankan server (console)
 
 ```bash
-bin\fingerprint-service.exe -addr :8080
+bin\fingerprint-service.exe -addr :8083
 ```
 
 ## Menjalankan sebagai Windows Service

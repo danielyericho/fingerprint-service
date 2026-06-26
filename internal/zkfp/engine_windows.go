@@ -5,6 +5,7 @@ package zkfp
 import (
 	"fmt"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -20,10 +21,30 @@ type Engine struct {
 	quit     chan struct{}
 }
 
-func NewEngine(progID string) (*Engine, error) {
-	if progID == "" {
-		progID = defaultProgID
+func candidateProgIDs(progID string) []string {
+	candidates := []string{}
+	add := func(value string) {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			return
+		}
+		for _, existing := range candidates {
+			if strings.EqualFold(existing, value) {
+				return
+			}
+		}
+		candidates = append(candidates, value)
 	}
+
+	add(progID)
+	if progID == "" {
+		add(defaultProgID)
+		add("ZKFPEngX.ZKFPEngX")
+	}
+	return candidates
+}
+func NewEngine(progID string) (*Engine, error) {
+	progIDs := candidateProgIDs(progID)
 
 	e := &Engine{
 		taskChan: make(chan func()),
@@ -41,26 +62,34 @@ func NewEngine(progID string) (*Engine, error) {
 			return
 		}
 		defer ole.CoUninitialize()
+		var disp *ole.IDispatch
+		attempts := make([]string, 0, len(progIDs))
+		for _, candidate := range progIDs {
+			clsid, err := ole.CLSIDFromProgID(candidate)
+			if err != nil {
+				attempts = append(attempts, fmt.Sprintf("%s: CLSIDFromProgID: %v", candidate, err))
+				continue
+			}
 
-		clsid, err := ole.CLSIDFromProgID(progID)
-		if err != nil {
-			initErrChan <- fmt.Errorf("CLSIDFromProgID: %w", err)
+			unknown, err := ole.CreateInstance(clsid, ole.IID_IDispatch)
+			if err != nil {
+				attempts = append(attempts, fmt.Sprintf("%s: CreateInstance: %v", candidate, err))
+				continue
+			}
+			defer unknown.Release()
+
+			disp, err = unknown.QueryInterface(ole.IID_IDispatch)
+			if err != nil {
+				attempts = append(attempts, fmt.Sprintf("%s: QueryInterface: %v", candidate, err))
+				continue
+			}
+			break
+		}
+		if disp == nil {
+			initErrChan <- fmt.Errorf("create ZKFinger COM object failed (arch=%s, tried=%s): %s. If the SDK/OCX is registered only as 32-bit ActiveX, build and run this service as GOARCH=386 or install/register the 64-bit SDK/OCX", runtime.GOARCH, strings.Join(progIDs, ", "), strings.Join(attempts, "; "))
 			return
 		}
 
-		unknown, err := ole.CreateInstance(clsid, ole.IID_IDispatch)
-		if err != nil {
-			initErrChan <- fmt.Errorf("CreateInstance: %w", err)
-			return
-		}
-		defer unknown.Release()
-
-		disp, err := unknown.QueryInterface(ole.IID_IDispatch)
-		if err != nil {
-			initErrChan <- fmt.Errorf("QueryInterface: %w", err)
-			return
-		}
-		
 		e.obj = disp
 		initErrChan <- nil // Lapor inisialisasi sukses!
 
@@ -245,11 +274,11 @@ func (e *Engine) CaptureTemplate(timeout time.Duration) (FPStringV9, FPStringV10
 			err = fmt.Errorf("BeginCapture: %w", errBegin)
 			return
 		}
-		
+
 		// Gembok otomatis
 		defer func() {
 			_, _ = oleutil.CallMethod(e.obj, "CancelCapture")
-			runMessageLoop() 
+			runMessageLoop()
 		}()
 
 		deadline := time.Now().Add(timeout)
@@ -260,7 +289,7 @@ func (e *Engine) CaptureTemplate(timeout time.Duration) (FPStringV9, FPStringV10
 				FPStringV9 = v9.ToString()
 				v9.Clear()
 			}
-			
+
 			if FPStringV9 != "" && FPStringV9 != oldStringTemplate {
 				v10, _ := oleutil.CallMethod(e.obj, "GetTemplateAsStringEx", "10")
 				if v10 != nil {
@@ -269,7 +298,7 @@ func (e *Engine) CaptureTemplate(timeout time.Duration) (FPStringV9, FPStringV10
 				}
 				return // Selesai! Fungsi HTTP akan di-resume
 			}
-			
+
 			time.Sleep(100 * time.Millisecond)
 		}
 
@@ -293,7 +322,7 @@ func (e *Engine) EnrollTemplate(enrollCount int, timeout time.Duration) (FPStrin
 			err = fmt.Errorf("BeginEnroll: %w", errBegin)
 			return
 		}
-		
+
 		defer func() {
 			_, _ = oleutil.CallMethod(e.obj, "CancelEnroll")
 			runMessageLoop()
@@ -307,16 +336,16 @@ func (e *Engine) EnrollTemplate(enrollCount int, timeout time.Duration) (FPStrin
 				FPStringV9 = v9.ToString()
 				v9.Clear()
 			}
-			
+
 			if FPStringV9 != "" && FPStringV9 != oldStringTemplate {
 				v10, _ := oleutil.CallMethod(e.obj, "GetTemplateAsStringEx", "10")
 				if v10 != nil {
 					FPStringV10 = v10.ToString()
 					v10.Clear()
 				}
-				return 
+				return
 			}
-			
+
 			time.Sleep(100 * time.Millisecond)
 		}
 
@@ -326,15 +355,25 @@ func (e *Engine) EnrollTemplate(enrollCount int, timeout time.Duration) (FPStrin
 }
 
 func variantToInt32(v *ole.VARIANT) int32 {
-	if v == nil { return 0 }
+	if v == nil {
+		return 0
+	}
 	val := v.Value()
-	if val == nil { return 0 }
+	if val == nil {
+		return 0
+	}
 	switch x := val.(type) {
-	case int32: return x
-	case int64: return int32(x)
-	case int: return int32(x)
-	case uint32: return int32(x)
-	case uint64: return int32(x)
-	default: return 0
+	case int32:
+		return x
+	case int64:
+		return int32(x)
+	case int:
+		return int32(x)
+	case uint32:
+		return int32(x)
+	case uint64:
+		return int32(x)
+	default:
+		return 0
 	}
 }

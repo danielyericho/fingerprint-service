@@ -8,9 +8,7 @@ import (
 func TestNewEngine(t *testing.T) {
 	eng, err := NewEngine("")
 	if err != nil {
-		if err != errWindowsOnly {
-			t.Logf("NewEngine error (may be driver/sensor): %v", err)
-		}
+		t.Logf("NewEngine error (may be unsupported OS, driver/sensor, or COM registration): %v", err)
 		return
 	}
 	defer eng.Close()
@@ -18,9 +16,9 @@ func TestNewEngine(t *testing.T) {
 		t.Logf("Init (expected if no sensor): %v", err)
 		return
 	}
-	// Stub or real: CaptureTemplate with short timeout
+	// Stub or real: CaptureTemplate with short timeout.
 	_, _, err = eng.CaptureTemplate(100 * time.Millisecond)
-	if err != nil && err != errWindowsOnly {
+	if err != nil {
 		t.Logf("CaptureTemplate (expected timeout or no sensor): %v", err)
 	}
 }

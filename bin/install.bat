@@ -53,6 +53,7 @@ if %errorlevel% equ 0 (
 if %errorlevel% neq 0 goto :fail_create
 
 "%NSSM%" set "%SERVICE_NAME%" AppDirectory "%SCRIPT_DIR%"
+"%NSSM%" set "%SERVICE_NAME%" AppParameters "-addr :8083"
 "%NSSM%" set "%SERVICE_NAME%" DisplayName "%SERVICE_DISPLAY%"
 "%NSSM%" set "%SERVICE_NAME%" Description "Fingerprint Qubu HTTP API service (managed by NSSM)."
 "%NSSM%" set "%SERVICE_NAME%" Start SERVICE_AUTO_START

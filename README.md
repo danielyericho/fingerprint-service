@@ -2,12 +2,12 @@
 
 Service berbasis Go untuk Windows yang mengintegrasikan **ZKFinger SDK** (ZKTeco) via COM/ActiveX. Service mengembalikan data fingerprint dalam bentuk string dan menyediakan pencocokan 1:1 (verify) dan 1:N (identify) menggunakan fitur SDK; data template untuk matching dikirim oleh pemanggil (tidak ada database di dalam service).
 
-**Target:** Windows only. **Pendekatan:** Go + go-ole (COM).
+**Target:** Windows 7 32-bit ke atas (termasuk Win10/Win11 via WOW64). **Pendekatan:** Go + go-ole (COM).
 
 ## Persyaratan
 
-- **Windows** (driver ZKFinger dan sensor terpasang)
-- **Go 1.17+** (disarankan 1.21+)
+- **Windows 7 32-bit** atau lebih baru (Win10/Win11 64-bit menjalankan binary 32-bit via WOW64)
+- **Go 1.17.x** (untuk build dari sumber; sudah diverifikasi jalan di Win7 32-bit)
 - **ZKFinger SDK / driver** terinstal (setup dari folder Fingerprint; komponen COM/OCX terdaftar, mis. ZKFPEngX / Biokey.ocx)
 
 ## Instalasi driver
@@ -22,9 +22,7 @@ Pastikan **GOROOT** mengarah ke instalasi Go yang benar (path std lib harus vali
 
 ### Build dengan script (disarankan)
 
-Script `build.sh` mem-build `fingerprint-service.exe` dan `cli.exe`, menyematkan build version ke binary, lalu menyimpan version ke `bin/version.txt`.
-
-Script akan mem-build binary, menyimpan version ke `bin/version.txt`, lalu membuat ZIP installer di `dist/installer-fingerprint-qubu-service-<version>.zip`.
+Script `build.sh` mem-build **binary 32-bit** (`GOARCH=386`) — satu executable untuk Win7 32-bit dan Win10/Win11 64-bit — menyematkan build version, lalu membuat ZIP installer di `dist/`.
 
 ```bash
 cd D:\Education\programming\golang\fingerprint-service
@@ -58,6 +56,8 @@ bin\cli.exe -version
 ```bash
 cd D:\Education\programming\golang\fingerprint-service
 go mod tidy
+set GOOS=windows
+set GOARCH=386
 go build -ldflags "-X main.version=v1.0" -o bin\fingerprint-service.exe ./cmd/server
 go build -ldflags "-X main.version=v1.0" -o bin\cli.exe ./cmd/cli
 ```
@@ -194,4 +194,4 @@ Tidak ada database di dalam service ini.
 
 - **Message pump:** COM/ActiveX membutuhkan message loop Windows agar event OnCapture/OnEnroll bisa terkirim. Implementasi saat ini memakai polling + message loop singkat; untuk production dengan event penuh mungkin perlu event sink.
 - **ProgID:** Default `ZKFPEngX.ZKFPEngX`. Jika setup SDK mendaftarkan CLSID dengan nama lain, sesuaikan di kode (NewEngine(progID)).
-- **Go 1.17:** `go.mod` memakai `go 1.17`; tetap kompatibel dengan Go yang lebih baru.
+- **Go 1.17:** `go.mod` memakai `go 1.17`; build 32-bit (`GOARCH=386`) agar satu binary jalan di Win7 32-bit dan Win10/11 64-bit.

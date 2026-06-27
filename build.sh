@@ -59,11 +59,12 @@ go mod tidy
 
 LDFLAGS="-s -w -X main.version=${BUILD_VERSION}"
 export GOOS=windows
+export GOARCH=386
 
-echo -e "${YELLOW}Building fingerprint-service.exe...${NC}"
+echo -e "${YELLOW}Building fingerprint-service.exe (32-bit, GOARCH=386)...${NC}"
 go build -ldflags "$LDFLAGS" -o bin/fingerprint-service.exe ./cmd/server
 
-echo -e "${YELLOW}Building cli.exe...${NC}"
+echo -e "${YELLOW}Building cli.exe (32-bit, GOARCH=386)...${NC}"
 go build -ldflags "$LDFLAGS" -o bin/cli.exe ./cmd/cli
 
 if [ ! -f "bin/fingerprint-service.exe" ] || [ ! -f "bin/cli.exe" ]; then
@@ -137,7 +138,7 @@ echo "  bin/cli.exe                  (version: $BUILD_VERSION)"
 echo "  bin/version.txt"
 echo "  $TARGET_PATH"
 echo ""
-echo "Isi ZIP: executable, version.txt, dan script service (*.bat) dari folder bin."
+echo "Binary: 32-bit Windows (GOARCH=386) — satu paket untuk Win7 32-bit, Win10/11 64-bit (WOW64)."
 echo "Jika nssm.exe ada di bin/, file tersebut ikut ter-pack. Jika tidak, jalankan download-nssm.bat setelah extract."
 echo ""
 echo "Cek version:"
